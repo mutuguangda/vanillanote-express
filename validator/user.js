@@ -37,7 +37,7 @@ exports.login = [
     body("user.password").notEmpty().withMessage("密码不能为空"),
   ]),
   validate([
-    body("user.emil").custom(async (email, { req }) => {
+    body("user.email").custom(async (email, { req }) => {
       const user = await User.findOne({ email }).select([
         "email",
         "password",

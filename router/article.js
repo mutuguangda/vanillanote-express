@@ -12,7 +12,7 @@ router.get("/articles", articleCtrl.listArticles);
 router.get("/feed", auth, articleCtrl.feedArticles);
 
 // Init Articles
-router.get("/init", articleCtrl.initArticles);
+router.get("/init", auth, articleCtrl.initArticles);
 
 // Get Article
 router.get("/:articleId", articleValidator.getArticle, articleCtrl.getArticle);

@@ -6,10 +6,10 @@ const auth = require("../middleware/auth");
 const router = express.Router();
 
 // Authentication 用户登录
-router.post("/users/login", userValidator.login, userCtrl.login);
+router.post("/user/login", userValidator.login, userCtrl.login);
 
 // Registration 用户注册
-router.post("/users", userValidator.register, userCtrl.register);
+router.post("/user/register", userValidator.register, userCtrl.register);
 
 // Get Current User 获取当前登录用户
 router.get("/user", auth, userCtrl.getCurrentUser);
