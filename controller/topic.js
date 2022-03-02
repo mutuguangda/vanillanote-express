@@ -1,10 +1,10 @@
-const { Tag } = require('@/model')
+const { Topic } = require('@/model')
 
-// list Tags
-exports.getTags = async (req, res, next) => {
+// list topics
+exports.getTopics = async (req, res, next) => {
   try {
-    const { limit = 1, offset = 0 } = req.query;
-    const tags = await Tag.find({})
+    const { limit = 20, offset = 0 } = req.query;
+    const topics = await Topic.find({})
       .skip(+offset) // 跳过多少条
       .limit(+limit) // 取多少条
       .sort({
@@ -13,8 +13,8 @@ exports.getTags = async (req, res, next) => {
         visit: -1,
       });
     res.status(200).json({
-      tags
-    }) 
+      topics
+    })
   } catch (err) {
     next(err);
   }

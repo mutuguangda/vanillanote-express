@@ -4,6 +4,11 @@ const notion = require('@/util/notion')
 /**
  * Init Articles
  * 默认是拉取100条文章信息
+ * 同步的方案有二(即Notion文章删除后,服务器如何知道已经删除?):
+ * 1. 维护一个服务器ID集合,逐个在Notion仓库中搜索,若没有搜索到则删除mongodb的数据,反之跳过
+ * 2. 维护一个服务器的ID集合,以此拼接一个page url,若能正常访问则表示未被删除
+ *  a. 需要确认无法访问的情况是什么错误,服务器错误还是不存在文章
+ * 谨慎删除!(因为当发布之后便成为了你的永久笔记,这里先单独做一个删除)
  */
 exports.initArticles = async (req, res, next) => {
   try {
@@ -33,22 +38,23 @@ exports.initArticles = async (req, res, next) => {
       const tmp = await Article.findOne({ pageId })
       // 如果在数据中未找到则直接新建
       const article = {
-        pageId,
-        createdBy: cur.created_by,
+        pageId: pageId,
+        title: properties.title.title[0]?.plain_text,
+        createdBy: properties.createdBy.created_by,
         createdTime: cur.created_time,
         lastEditedTime: cur.last_edited_time,
-        lastEditedBy: cur.last_edited_by,
+        lastEditedBy: properties.lastEditedBy.last_edited_by,
         publishedTime: properties.publishedTime.date.start,
         image: properties.image.files[0]?.file.url,
-        isPublished: properties.checkbox,
+        isPublished: properties.isPublished.checkbox,
         desc: properties.desc.rich_text[0]?.plain_text,
         tags: properties.tags.multi_select.map(tag => tag.name),
-        title: properties.title.title.plain_text,
         topic: properties.topic.select?.name
       }
+      console.log(article);
       // 如果在数据库中找到,则校验文章是否匹配
       if (tmp) {
-        
+        await Article.findOneAndUpdate({ pageId }, article, { returnDocument: "after" })
       }
 
       // 导入标签库
@@ -71,7 +77,7 @@ exports.initArticles = async (req, res, next) => {
         }).save()
       }
 
-      await new Article(article).save();
+      if (!tmp) await new Article(article).save();
       articles.push(article);
     }
     res.status(201).json({
@@ -108,7 +114,7 @@ exports.listArticles = async (req, res, next) => {
       .sort({
         // 排序
         // -1：倒序   1：升序
-        createdAt: -1,
+        publishedTime: -1,
       });
     const articlesCont = await Article.countDocuments();
     res.status(200).json({
@@ -182,10 +188,9 @@ exports.updateArticle = async (req, res, next) => {
   }
 };
 
-// Delete Article
+// Delete Article #
 exports.deleteArticle = async (req, res, next) => {
   try {
-    console.log(req.article);
     const article = req.article;
     await article.remove();
     res.status(204).end();
