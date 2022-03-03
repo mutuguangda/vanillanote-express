@@ -15,7 +15,7 @@ router.get("/feed", auth, articleCtrl.feedArticles);
 router.get("/init", auth, articleCtrl.initArticles);
 
 // Get Article
-router.get("/:articleId", articleValidator.getArticle, articleCtrl.getArticle);
+router.get("/:articleId",  articleCtrl.getArticle);
 
 
 // Create Article 创建文章

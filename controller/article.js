@@ -116,10 +116,10 @@ exports.listArticles = async (req, res, next) => {
         // -1：倒序   1：升序
         publishedTime: -1,
       });
-    const articlesCont = await Article.countDocuments();
+    const articlesCount = await Article.countDocuments();
     res.status(200).json({
       articles,
-      articlesCont,
+      articlesCount,
     });
     res.send("get /articles/");
   } catch (err) {
@@ -141,9 +141,7 @@ exports.feedArticles = async (req, res, next) => {
 exports.getArticle = async (req, res, next) => {
   try {
     // 处理请求
-    const article = await Article.findById(req.params.articleId).populate(
-      "author"
-    );
+    const article = await Article.findById(req.params.articleId)
     if (!article) {
       return res.status(404).end();
     }
