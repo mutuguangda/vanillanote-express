@@ -42,6 +42,11 @@ exports.login = [
   validate([
     body("userName").custom(async (userName, { req }) => {
       const user = await User.findOne({ userName })
+      .select([
+        "userName",
+        "roleIds",
+        "password",
+      ]);
       // 查询数据库查看数据是否存在
       if (!user) {
         return Promise.reject("用户不存在");

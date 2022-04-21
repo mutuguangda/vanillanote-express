@@ -1,19 +1,19 @@
 const express = require("express");
 const router = express.Router();
 
-// 用户相关路由
-router.use(require("./user"));
+// 系统管理相关路由
+router.use('/system', require('./system/index'))
 
-// 文章相关路由
-router.use("/article", require("./article"));
+// 系统监控相关路由
+router.use('/monitor', require('./monitor/index'))
 
-// 标签相关路由
-router.use(require("./tag"));
+// 登录相关路由(包含获取用户信息, 获取路由)
+router.use(require('./login'))
 
-// 网站配置
-router.use('/site', require('./site'))
+// 博客管理相关路由
+router.use('/blog', require('./blog/index'))
 
-// 专题管理
-router.use(require("./topic"));
+// memo管理
+router.use('/memo', require('./notion/memo'))
 
 module.exports = router;

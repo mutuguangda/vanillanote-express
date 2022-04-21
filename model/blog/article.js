@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 
 const articleSchema = new mongoose.Schema({
+  articleId: Number, // 文章自增id
   pageId: String, // notion page id
   title: String,  // 标题
   tags: Array, // 标签
@@ -13,7 +14,8 @@ const articleSchema = new mongoose.Schema({
   image: Array,  // 图片
   desc: String, // 描述
   visit: Number,  // 访问数
-  topic: Array // 专题
+  topic: Array, // 专题
+  comments: Array // 评论
 })
 
 module.exports = articleSchema

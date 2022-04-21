@@ -2,15 +2,14 @@ require('module-alias/register')
 require('dotenv').config()
 const express = require("express");
 const morgan = require("morgan");
-const cors = require("cors");
-const router = require("./router");
-const errorHandler = require("./middleware/error-handler");
-require("./model");
+const router = require("@/router");
+const errorHandler = require("@/middleware/error-handler");
+require("@/model");
 
 const app = express();
 
 app.use(morgan("dev"));
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded());
 
