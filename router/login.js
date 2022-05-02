@@ -12,7 +12,10 @@ router.post("/login", loginValidator.login, loginCtrl.login)
 router.get('/getInfo', auth, loginCtrl.getInfo)
 
 // 获取路由
-router.get('/getRouters', loginCtrl.getRouters)
+router.get('/captchaImage', loginCtrl.captchaImage)
+
+// 获取路由
+router.get('/getRouters', auth, loginCtrl.getRouters)
 
 // 注销
 router.post('/logout', loginCtrl.logout)

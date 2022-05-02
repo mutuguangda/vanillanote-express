@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const dbURI = process.env.DB_URI
 const { modelSaveWithIdIncrement } = require('@/util/common')
+const { createJob } = require('@/util/job')
 
 // 连接 MongoDB 数据库
 mongoose.connect(dbURI, {
@@ -27,7 +28,10 @@ const Site = mongoose.model('Site', require('./site/site'))
 // const Setting = mongoose.model('Setting', require('./setting'))
 const Memo = mongoose.model('Memo', require('./notion/memo'))
 const Seq = mongoose.model('Seq', require('./common/seq'))
-const Recommendation = mongoose.model('Recommendation', require('.//blog/recommendation'))
+const Recommendation = mongoose.model('Recommendation', require('./blog/recommendation'))
+const Code = mongoose.model('Code', require('./common/code'))
+const Job = mongoose.model('Job', require('./monitor/job'))
+
 
 const userSchema = require('./system/user')
 const roleSchema = require('./system/role');
@@ -145,6 +149,12 @@ function preSaveWithIdIncrement(modelSchema, modelName, Seq) {
       menuName: '系统管理',
     }).save()
   }
+
+  // 定时任务初始化
+  const jobs = await Job.find({})
+  jobs.forEach(job => {
+    createJob(job)
+  })
 })()
 
 // 组织导出模型看类
@@ -166,4 +176,6 @@ module.exports = {
   DictData,
   Config,
   Recommendation,
+  Code,
+  Job,
 }

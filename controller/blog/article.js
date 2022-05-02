@@ -36,12 +36,21 @@ exports.updateArticle = async (req, res, next) => {
 exports.listArticle = async (req, res, next) => {
   try {
     // 默认取到 5 个
-    const { pageNum, pageSize, tag, topic, isPublished, createdTime } = req.query;
+    const { pageNum, pageSize, tags, topic, isPublished, title } = req.query;
     const filter = {}
-    if (tag) filter.tag = tag
+    if (tags) {
+      filter.tags = { $elemMatch: { $eq: tags } }
+    }
     if (topic) filter.topic = topic
-    if (isPublished) filter.isPublished = isPublished
-    if (createdTime) filter.createdTime = createdTime
+    if (isPublished) {
+      if (isPublished === 'N')
+        filter.isPublished = false
+      if (isPublished === 'Y')
+        filter.isPublished = true
+    }
+    if (title) {
+      filter.title = { $regex: title }
+    }
     const articles = await Article.find(filter)
       .skip((pageNum - 1) * pageSize) // 跳过多少条
       .limit(+pageSize) // 取多少条
@@ -316,14 +325,12 @@ exports.syncArticle = async (req, res, next) => {
         ]
       },
     });
-    // console.log(articleResponse);
     if (articleResponse.results.length === 0) {
       res.status(200).json({
         code: 200,
         msg: 'Notion已无文章数据需要同步'
       })
     }
-    console.log('articleResponse', articleResponse);
     // 处理文章数据
     for (const cur of articleResponse.results) {
       const properties = cur.properties
@@ -378,23 +385,44 @@ exports.syncArticle = async (req, res, next) => {
 exports.forcedSyncArticle = async (req, res, next) => {
   try {
     await Article.deleteMany()
+    await Tag.deleteMany()
+    await Topic.deleteMany()
+    // 获得Notion文章列表
     const articleResponse = await notion.databases.query({
       database_id: process.env.ARTICLE_DATABASE_ID,
       filter: {
         and: [
-          {
-            property: 'isPublished',
-            checkbox: {
-              equals: true,
-            },
-          },
+          // {
+          //   property: 'isPublished',
+          //   checkbox: {
+          //     equals: true,
+          //   },
+          // },
+          // {
+          //   property: 'lastEditedTime',
+          //   last_edited_time: {
+          //     after: syncTime
+          //   }
+          // }
         ]
       },
     });
+    // console.log(articleResponse);
+    if (articleResponse.results.length === 0) {
+      res.status(200).json({
+        code: 200,
+        msg: 'Notion已无文章数据需要同步'
+      })
+    }
+    // 处理文章数据
     for (const cur of articleResponse.results) {
       const properties = cur.properties
       const pageId = cur.id
+      // 如果创建时间大于同步时间则是新增数据，反之则是修改数据
+      // const isCreated = cur.created_time > syncTime ? true : false
       // 处理获取文章数据
+      const tags = properties.tags.multi_select
+      const topic = properties.topic.select
       const article = {
         pageId: pageId,
         title: properties.title?.title[0]?.plain_text,
@@ -406,144 +434,24 @@ exports.forcedSyncArticle = async (req, res, next) => {
         image: properties.image?.files[0]?.file.url,
         isPublished: properties.isPublished.checkbox,
         desc: properties.desc?.rich_text[0]?.plain_text,
-        // tags: properties.tags.multi_select.map(tag => tag.name),
-        tags: properties.tags.multi_select,
-        topic: properties.topic.relation,
+        tags: tags.map(tag => tag.name),
+        topic: topic.name,
+        cover: cur.cover.external.url
       }
       // 同步Notion数据到服务端数据库
       await new Article(article).save()
-      // 修改Notion-Tag数据库
-      for (const tagsItem of article.tags) {
-        const tagTitle = tagsItem.name
-        // 查找tag数据库是否存在该tag
-        const tagQueryResponse = await notion.databases.query({
-          database_id: process.env.TAG_DATABASE_ID,
-          filter: {
-            property: 'title',
-            title: {
-              equals: tagTitle
-            }
-          }
-        })
-        let tagCreateOrUpdateResponse = null
-        if (tagQueryResponse.results.length === 0) {
-          // 未找到tag数据,创建新的条例存入
-          tagCreateOrUpdateResponse = await notion.pages.create({
-            parent: {
-              database_id: process.env.TAG_DATABASE_ID,
-            },
-            properties: {
-              "title": {
-                "title": [
-                  {
-                    "type": "text",
-                    "text": {
-                      "content": tagTitle
-                    }
-                  }
-                ]
-              },
-              articlesNum: {
-                "number": 1
-              },
-              visit: {
-                number: 0
-              }
-            }
-          })
-        } else {
-          // 反之，是找到tag数据
-          const tagPageId = tagQueryResponse.results[0].id
-          const articlesNum = tagQueryResponse.results[0].properties.articlesNum.number
-          tagCreateOrUpdateResponse = await notion.pages.update({
-            page_id: tagPageId,
-            properties: {
-              'articlesNum': {
-                "number": articlesNum + 1
-              }
-            },
-          });
-        }
-        const tagProperties = tagCreateOrUpdateResponse.properties
-        const tag = {
-          title: tagProperties.title?.title[0]?.plain_text,
-          visit: tagProperties.visit.number,
-          articlesNum: tagProperties.articlesNum.number,
-          createdTime: tagCreateOrUpdateResponse.created_time,
-          lastEditedTime: tagCreateOrUpdateResponse.last_edited_time,
-        }
-        await Tag.findOneAndUpdate({ title: tag.title }, tag, { upsert: true })
-        // 导入专题库
-        // const articleTopic = article.topic
-        // const topic = await Topic.findOne({ title: articleTopic })
-        // if (article.topic && !topic) {
-        //   console.log('导入专题库');
-        //   await new Topic({
-        //     title: articleTopic
-        //   }).save()
-        // }
-
-        // if (!tmp) await new Article(article).save();
-        // articles.push(article);
+      for (const tag of tags) {
+        await Tag.findOneAndUpdate({ tagName: tag.name }, {
+          tagColor: tag.color,
+          $inc: { articlesNum: 1 }
+        }, { upsert: true })
       }
-      // 修改Notion-Topic数据库
-      // const topicTitle = article.topic
-      // const topicQueryResponse = await notion.databases.query({
-      //   database_id: process.env.TOPIC_DATABASE_ID,
-      //   filter: {
-      //     property: 'title',
-      //     title: {
-      //       equals: topicTitle
-      //     }
-      //   }
-      // })
-      // if (topicQueryResponse.results.length === 0) {
-      //   // 未找到topic数据,创建新的条例存入
-      //   const topicCreateResponse = await notion.pages.create({
-      //     parent: {
-      //       database_id: process.env.TOPIC_DATABASE_ID,
-      //     },
-      //     properties: {
-      //       "title": {
-      //         "title": [
-      //           {
-      //             "type": "text",
-      //             "text": {
-      //               "content": topicTitle
-      //             }
-      //           }
-      //         ]
-      //       },
-      //       articlesNum: {
-      //         "number": 1
-      //       },
-      //       articles: {
-      //         relation: [
-      //           {
-      //             id: pageId
-      //           }
-      //         ]
-      //       }
-      //     }
-      //   })
-      // } else {
-      //   // 反之，是找到topic数据
-      //   const topicPageId = topicQueryResponse.results[0].id
-      //   const articlesNum = topicQueryResponse.results[0].properties.articlesNum.number
-      //   const articles = topicQueryResponse.results[0].properties.articles.relation
-      //   const topicUpdateResponse = await notion.pages.update({
-      //     page_id: topicPageId,
-      //     properties: {
-      //       'articlesNum': {
-      //         "number": articlesNum + 1
-      //       },
-      //       articles: {
-      //         relation: articles.push(pageId)
-      //       }
-      //     },
-      //   });
-      // }
+      await Topic.findOneAndUpdate({ topicName: topic.name }, {
+        topicColor: topic.color,
+        $inc: { articlesNum: 1 }
+      }, { upsert: true })
     }
+    // 修改更新时间
     await Config.findOneAndUpdate({ configKey: 'blog.article.syncTime' }, {
       configValue: getCurrentTime()
     })

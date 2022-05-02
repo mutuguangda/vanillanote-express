@@ -1,7 +1,7 @@
 const { body } = require("express-validator");
-const validate = require("../middleware/validate");
-const { User } = require("../model");
-const md5 = require("../util/md5");
+const validate = require("@/middleware/validate");
+const { User, Code } = require("@/model");
+const md5 = require("@/util/md5");
 
 exports.register = validate([
   // 1. 配置验证规则
@@ -24,29 +24,44 @@ exports.register = validate([
     .withMessage("邮箱不能为空")
     .isEmail()
     .withMessage("邮箱格式不正确")
-  // .bail() // 如果错误就不向下执行
-  // .custom(async (value) => {
-  //   // 查询数据库查看数据是否存在
-  //   const user = await User.findOne({ email: value });
-  //   if (user) {
-  //     return Promise.reject("邮箱已存在");
-  //   }
-  // }),
 ]);
 
 exports.login = [
   validate([
+    body("uuid").notEmpty().withMessage("uuid不能为空"),
+    body("code").notEmpty().withMessage("验证码不能为空"),
     body("userName").notEmpty().withMessage("用户名不能为空"),
     body("password").notEmpty().withMessage("密码不能为空"),
   ]),
   validate([
+    body("uuid").custom(async (uuid, { req }) => {
+      const code = await Code.findOne({ uuid }).select(['text'])
+      // 查询数据库查看数据是否存在
+      if (!code) {
+        return Promise.reject("验证码已过期");
+      }
+      console.log(code);
+      req.code = code;
+    }),
+  ]),
+  validate([
+    body("code").custom(async (code, { req }) => {
+      console.log(req.code);
+      const isValidCode = String.prototype.toUpperCase(code) === String.prototype.toUpperCase(req.code.text)
+      // 查询数据库查看数据是否存在
+      if (!isValidCode) {
+        return Promise.reject("验证码不正确");
+      }
+    }),
+  ]),
+  validate([
     body("userName").custom(async (userName, { req }) => {
       const user = await User.findOne({ userName })
-      .select([
-        "userName",
-        "roleIds",
-        "password",
-      ]);
+        .select([
+          "userName",
+          "roleIds",
+          "password",
+        ]);
       // 查询数据库查看数据是否存在
       if (!user) {
         return Promise.reject("用户不存在");

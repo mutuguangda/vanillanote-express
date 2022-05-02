@@ -15,7 +15,9 @@ const articleSchema = new mongoose.Schema({
   desc: String, // 描述
   visit: Number,  // 访问数
   topic: Array, // 专题
-  comments: Array // 评论
+  comments: Array, // 评论
+  cover: String, // 图片
+  desc: String, // 描述
 })
 
 module.exports = articleSchema

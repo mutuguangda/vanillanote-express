@@ -5,11 +5,15 @@ const recommendationSchema = new mongoose.Schema({
   image: String,
   title: String,
   url: String,
-  article: String,
+  article: Object,
   visit: Number,
   status: {
     type: String,
     default: '0'
+  },
+  isFrame: {
+    type: String,
+    default: '1'
   },
   ...baseModel,
 })

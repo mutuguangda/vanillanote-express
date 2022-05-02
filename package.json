@@ -29,8 +29,10 @@
     "module-alias": "^2.2.2",
     "mongoose": "^6.2.2",
     "morgan": "^1.10.0",
+    "node-schedule": "^2.1.0",
     "svg-captcha": "^1.4.0",
-    "ua-parser-js": "^1.0.2"
+    "ua-parser-js": "^1.0.2",
+    "uuid": "^8.3.2"
   },
   "_moduleAliases": {
     "@": "."

@@ -138,7 +138,6 @@ exports.syncTopic = async (req, res, next) => {
         articlesNum: properties.articlesNum?.formula?.number,
         visit: properties.visit?.number,
       }
-      console.log(topic);
       // 同步Notion数据到服务端数据库
       await new Topic(topic).save()
     }

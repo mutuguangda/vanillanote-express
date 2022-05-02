@@ -5,7 +5,9 @@ const { getCurrentTime } = require('@/util/common')
 // 添加推荐
 exports.addRecommendation = async (req, res, next) => {
   try {
-    const recommendation = await new Recommendation(req.body).save()
+    const body = req.body 
+    if (body.article) body.url = `/post/${body.article.articleId}`
+    const recommendation = await new Recommendation(body).save()
     const saveRecommendation = recommendation.toJSON();
     // 4. 发送成功响应
     res.status(201).json({
@@ -22,7 +24,8 @@ exports.addRecommendation = async (req, res, next) => {
 exports.updateRecommendation = async (req, res, next) => {
   try {
     const recommendation = req.body
-    await Recommendation.findOneAndUpdate({ recommendationId: recommendation.recommendationId }, recommendation)
+    if (recommendation.article) recommendation.url = `/post/${recommendation.article.articleId}`
+    await Recommendation.findByIdAndUpdate(recommendation._id, recommendation)
     res.status(200).json({
       code: 200,
       msg: '操作成功'
@@ -66,7 +69,7 @@ exports.listRecommendation = async (req, res, next) => {
 exports.getRecommendation = async (req, res, next) => {
   try {
     const recommendationId = req.params.recommendationId
-    const recommendation = await Recommendation.findOne({ recommendationId })
+    const recommendation = await Recommendation.findById(recommendationId)
     if (!recommendation) {
       return res.status(404).end();
     }

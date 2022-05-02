@@ -1,6 +1,7 @@
-const { User, UserOnline, Menu } = require("@/model")
+const { User, UserOnline, Menu, Code, Role } = require("@/model")
 const UAParser = require("ua-parser-js");
 const jwt = require("@/util/jwt")
+const createCode = require('@/util/code')
 
 // 用户登录
 exports.login = async (req, res, next) => {
@@ -61,9 +62,29 @@ exports.getInfo = async (req, res, next) => {
   }
 };
 
+// 获取验证码
+exports.captchaImage = async (req, res, next) => {
+  try {
+    // const code = await new Code({ img: cr })
+    const code = createCode()
+    const saveCode = await new Code(code).save()
+    res.status(200).json({
+      code: 200,
+      msg: '操作成功',
+      img: saveCode.data,
+      uuid: saveCode.uuid,
+    })
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 获取路由
 exports.getRouters = async (req, res, next) => {
   try {
+    // const user = req.user
+    // const role = await Role.findOne({ roleName: user.roleName })
+    // const menuIds = role.menuIds
     const routers = []
     const categories = await Menu.find({ parentId: 0 })
       .sort({
@@ -72,6 +93,7 @@ exports.getRouters = async (req, res, next) => {
         orderNum: 1,
       });
     for (const category of categories) {
+      // if (menuIds.indexOf(categories.menuId) === -1) continue
       const categoryRouter = {
         name: category.path.replace(/^\S/, s => s.toUpperCase()),
         path: `/${category.path}`,
@@ -92,7 +114,6 @@ exports.getRouters = async (req, res, next) => {
           // -1：倒序   1：升序
           orderNum: 1,
         });
-      // console.log(menus);
       if (menus) categoryRouter.children = []
       for (const menu of menus) {
         const menuRouter = {
